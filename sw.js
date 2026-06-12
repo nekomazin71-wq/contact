@@ -1,6 +1,6 @@
-const CACHE_NAME = 'contact-app-v1';
+const CACHE_NAME = 'contact-app-v2';
 const ASSETS = [
-  'contact_app.html',
+  'index.html',
   'manifest.json'
 ];
 
