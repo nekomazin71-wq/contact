@@ -34,9 +34,9 @@
   }
   button {
     padding: 10px 5px;
-    border: none; /* ボーダーを消してスッキリさせる */
+    border: none;
     border-radius: 6px;
-    background: #e0e0e0; /* 選択前の背景色 */
+    background: #e0e0e0;
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
@@ -50,7 +50,6 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
   
-  /* 品目リストのスタイル */
   .item-list {
     display: flex;
     flex-direction: column;
@@ -85,12 +84,33 @@
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 4px;
+    user-select: none;
   }
-  .qty-num {
+  .qty-input {
     font-size: 18px;
     font-weight: bold;
-    min-width: 25px;
+    width: 48px;
+    height: 34px;
     text-align: center;
+    border: 1px solid #bbb;
+    background: #fff;
+    color: #2196f3;
+    padding: 0;
+    margin: 0;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    -moz-appearance: textfield;
+  }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .qty-input:focus {
+    outline: none;
+    background: #e3f2fd;
+    border: 2px solid #2196f3;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
   }
 
   #preview {
@@ -157,29 +177,15 @@
 </div>
 
 <script>
-/* ==========================================
-   設定エリア：ここを書き換えてカスタマイズ
-   ========================================== */
 const CONFIG = {
-  // 「どこから」の選択肢
   locations: ["可児から", "大垣から", "北寺島", "山星屋", "丸憲"],
-  
-  // 「何を」の選択肢
-  items: ["茶コン", "ドーリー", "シャリ箱", "空台車"],
-  
-  // 複数選択時の区切り文字
+  items: ["茶コン", "ドーリー", "シャリ箱", "空台車", "PC"],
   separator: "、",
-
-  // 文章のテンプレート
-  // {from} = どこから, {items} = 何を（数量付き） に置き換わります
   template: "{from}  {items} です"
 };
 
-/* ==========================================
-   プログラム本体
-   ========================================== */
 let selectedFrom = "";
-let selectedItems = {}; // { "品目名": 数量 } の形式で保持
+let selectedItems = {}; 
 
 function init() {
   const fromContainer = document.getElementById('from-buttons');
@@ -228,26 +234,20 @@ function toggleItem(itemName) {
 }
 
 function changeItemQty(itemName, val) {
-  if (selectedItems[itemName]) {
+  if (selectedItems[itemName] !== undefined) {
     selectedItems[itemName] = Math.max(1, selectedItems[itemName] + val);
     renderSelectedItems();
     updatePreview();
   }
 }
 
-function directInputQty(itemName) {
-  const current = selectedItems[itemName];
-  const input = prompt(`${itemName} の数量を入力してください`, current);
-  if (input === null) return;
-  
-  const val = parseInt(input);
-  if (!isNaN(val) && val >= 1) {
-    selectedItems[itemName] = val;
-    renderSelectedItems();
-    updatePreview();
-  } else {
-    alert("1以上の数値を入力してください");
+function handleQtyInput(itemName, element) {
+  let val = parseInt(element.value);
+  if (isNaN(val) || val < 1) {
+    val = 1;
   }
+  selectedItems[itemName] = val;
+  updatePreview();
 }
 
 function renderSelectedItems() {
@@ -261,7 +261,16 @@ function renderSelectedItems() {
       <div class="item-name">${name}</div>
       <div class="item-qty-control">
         <button class="qty-btn" onclick="changeItemQty('${name}', -1)">-</button>
-        <span class="qty-num" onclick="directInputQty('${name}')" style="cursor:pointer; text-decoration:underline;">${selectedItems[name]}</span>
+        <input type="number" 
+               class="qty-input" 
+               value="${selectedItems[name]}" 
+               inputmode="numeric" 
+               pattern="[0-9]*"
+               onclick="this.select()"
+               onfocus="this.select()" 
+               onchange="handleQtyInput('${name}', this)"
+               oninput="handleQtyInput('${name}', this)"
+               onblur="if(this.value==='' || this.value<1) this.value=1;">
         <button class="qty-btn" onclick="changeItemQty('${name}', 1)">+</button>
       </div>
     `;
@@ -269,33 +278,48 @@ function renderSelectedItems() {
   });
 }
 
-function updatePreview() {
+function generateText(isForDisplay = true) {
   const itemEntries = Object.entries(selectedItems);
-  let itemsText = "（品目）";
+  let itemsText = "";
   
   if (itemEntries.length > 0) {
     itemsText = itemEntries.map(([name, qty]) => `${name} ${qty}台`).join(CONFIG.separator);
+  } else if (isForDisplay) {
+    // 表示用の時のみガイドを出すか検討したが、今回はガイド全削除
+    itemsText = "";
   }
   
+  const fromPart = selectedFrom || "";
+  
+  // 何も選択されていない場合は空にする
+  if (!fromPart && !itemsText) {
+    return "";
+  }
+
   let text = CONFIG.template
-    .replace('{from}', selectedFrom || "（場所）")
+    .replace('{from}', fromPart)
     .replace('{items}', itemsText);
   
-  document.getElementById('preview').value = text;
+  return text.trim();
+}
+
+function updatePreview() {
+  document.getElementById('preview').value = generateText(true);
 }
 
 function copyText() {
-  const preview = document.getElementById('preview');
-  if (!selectedFrom || Object.keys(selectedItems).length === 0) {
-    if(!confirm("項目が未選択ですがコピーしますか？")) return;
-  }
-  preview.select();
+  const text = generateText(false);
+  const tempTextArea = document.createElement('textarea');
+  tempTextArea.value = text;
+  document.body.appendChild(tempTextArea);
+  tempTextArea.select();
   document.execCommand('copy');
+  document.body.removeChild(tempTextArea);
   alert('コピーしました');
 }
 
 function shareLine() {
-  const text = document.getElementById('preview').value;
+  const text = generateText(false);
   const url = "https://line.me/R/msg/text/?" + encodeURIComponent(text);
   window.open(url, '_blank');
 }
@@ -311,7 +335,6 @@ function resetAll() {
 
 init();
 
-// サービスワーカーの登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
