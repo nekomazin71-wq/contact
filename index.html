@@ -193,8 +193,12 @@ function init() {
     const btn = document.createElement('button');
     btn.innerText = loc;
     btn.onclick = () => {
-      selectedFrom = loc;
-      updateFromButtons(loc);
+      if (selectedFrom === loc) {
+        selectedFrom = "";
+      } else {
+        selectedFrom = loc;
+      }
+      updateFromButtons(selectedFrom);
       updatePreview();
     };
     fromContainer.appendChild(btn);
@@ -268,6 +272,7 @@ function renderSelectedItems() {
                pattern="[0-9]*"
                onclick="this.select()"
                onfocus="this.select()" 
+               onkeydown="if(event.key==='Enter') this.blur();"
                onchange="handleQtyInput('${name}', this)"
                oninput="handleQtyInput('${name}', this)"
                onblur="if(this.value==='' || this.value<1) this.value=1;">
@@ -284,14 +289,10 @@ function generateText(isForDisplay = true) {
   
   if (itemEntries.length > 0) {
     itemsText = itemEntries.map(([name, qty]) => `${name} ${qty}台`).join(CONFIG.separator);
-  } else if (isForDisplay) {
-    // 表示用の時のみガイドを出すか検討したが、今回はガイド全削除
-    itemsText = "";
   }
   
   const fromPart = selectedFrom || "";
   
-  // 何も選択されていない場合は空にする
   if (!fromPart && !itemsText) {
     return "";
   }
