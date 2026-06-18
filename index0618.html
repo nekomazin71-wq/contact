@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196f3">
+  <title>連絡事項作成</title>
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 15px;
+    margin: 0;
+    background: #f4f7f6;
+    color: #333;
+  }
+  h2 {
+    font-size: 18px;
+    margin: 10px 0;
+    border-left: 5px solid #2196f3;
+    padding-left: 10px;
+  }
+  h3 {
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    color: #666;
+    font-weight: bold;
+  }
+  .section {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+  }
+  .button-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  button {
+    padding: 10px 5px;
+    border: none;
+    border-radius: 6px;
+    background: #e0e0e0;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    outline: none;
+    color: #333;
+  }
+  button.active {
+    background: #2196f3;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  .group-container {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+
+  .item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+  .item-name {
+    flex: 1;
+    font-weight: bold;
+    font-size: 15px;
+  }
+  .item-qty-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .qty-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    user-select: none;
+  }
+  .qty-input {
+    font-size: 18px;
+    font-weight: bold;
+    width: 48px;
+    height: 34px;
+    text-align: center;
+    border: 1px solid #bbb;
+    background: #fff;
+    color: #2196f3;
+    padding: 0;
+    margin: 0;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    -moz-appearance: textfield;
+    -webkit-touch-callout: none;
+    -webkit-user-select: all;
+  }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .qty-input:focus {
+    outline: none;
+    background: #e3f2fd;
+    border: 2px solid #2196f3;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+  }
+
+  #preview {
+    width: 100%;
+    height: 120px;
+    padding: 10px;
+    border: 2px solid #2196f3;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 16px;
+    margin-top: 10px;
+    background: #fff;
+    resize: none;
+  }
+  .action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .btn-main {
+    height: 50px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    color: #fff;
+  }
+  .btn-copy { background: #607d8b; }
+  .btn-line { background: #00C300; }
+  .btn-reset { 
+    background: #f44336; 
+    grid-column: span 2;
+    margin-top: 5px;
+  }
+  button:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <h2>場所</h2>
+  <div class="group-container">
+    <h3>空台車の数量連絡</h3>
+    <div id="from-group-a" class="button-grid"></div>
+  </div>
+  <div class="group-container">
+    <h3>センターへ回収（茶コン・ドーリー等）</h3>
+    <div id="from-group-b" class="button-grid"></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>何を・どれだけ</h2>
+  <div id="item-buttons" class="button-grid" style="margin-bottom:15px;"></div>
+  <div id="selected-items-list" class="item-list">
+    <!-- 選択された品目がここに表示される -->
+  </div>
+</div>
+
+<div class="section">
+  <h2>プレビュー （クリックで文章編集）</h2>
+<textarea id="preview"></textarea>
+  <div class="action-buttons">
+    <button class="btn-main btn-copy" onclick="copyText()">コピー</button>
+    <button class="btn-main btn-line" onclick="shareLine()">LINE</button>
+    <button class="btn-main btn-reset" onclick="resetAll()">リセット</button>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  groupA: ["北寺島", "山星屋", "丸憲"],
+  groupB: ["可児から", "大垣から"],
+  items: ["茶コン", "ドーリー", "シャリ箱", "空台車"],
+  separator: "、",
+  template: "{from}  {items} です",
+  rules: {
+    "北寺島": { only: ["空台車"], auto: ["空台車"] },
+    "山星屋": { only: ["空台車"], auto: ["空台車"] },
+    "丸憲": { only: ["空台車"], auto: ["空台車"] },
+    "可児から": { exclude: ["空台車"], auto: ["茶コン", "ドーリー"] },
+    "大垣から": { exclude: ["空台車"], auto: ["茶コン", "ドーリー"] }
+  }
+};
+
+let selectedFrom = "";
+let selectedItems = {}; 
+
+function init() {
+  const groupAContainer = document.getElementById('from-group-a');
+  CONFIG.groupA.forEach(loc => {
+    const btn = createLocationButton(loc);
+    groupAContainer.appendChild(btn);
+  });
+
+  const groupBContainer = document.getElementById('from-group-b');
+  CONFIG.groupB.forEach(loc => {
+    const btn = createLocationButton(loc);
+    groupBContainer.appendChild(btn);
+  });
+
+  const itemContainer = document.getElementById('item-buttons');
+  CONFIG.items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.innerText = item;
+    btn.id = 'btn-item-' + item;
+    btn.onclick = () => {
+      toggleItem(item);
+    };
+    itemContainer.appendChild(btn);
+  });
+
+  updatePreview();
+}
+
+function createLocationButton(loc) {
+  const btn = document.createElement('button');
+  btn.innerText = loc;
+  btn.onclick = () => {
+    if (selectedFrom === loc) {
+      selectedFrom = "";
+    } else {
+      selectedFrom = loc;
+    }
+    applyLocationRules();
+    updateFromButtons(selectedFrom);
+    updatePreview();
+  };
+  return btn;
+}
+
+function applyLocationRules() {
+  const rule = CONFIG.rules[selectedFrom];
+  selectedItems = {};
+  
+  CONFIG.items.forEach(item => {
+    const btn = document.getElementById('btn-item-' + item);
+    btn.classList.remove('active');
+    
+    if (!selectedFrom) {
+      btn.disabled = false;
+      return;
+    }
+
+    if (rule.only) {
+      btn.disabled = !rule.only.includes(item);
+    } else if (rule.exclude) {
+      btn.disabled = rule.exclude.includes(item);
+    } else {
+      btn.disabled = false;
+    }
+
+    if (rule.auto && rule.auto.includes(item)) {
+      selectedItems[item] = 1;
+      btn.classList.add('active');
+    }
+  });
+
+  renderSelectedItems();
+}
+
+function updateFromButtons(activeText) {
+  const buttons = document.querySelectorAll('.group-container button');
+  buttons.forEach(btn => {
+    btn.classList.toggle('active', btn.innerText === activeText);
+  });
+}
+
+function toggleItem(itemName) {
+  if (selectedItems[itemName]) {
+    delete selectedItems[itemName];
+    document.getElementById('btn-item-' + itemName).classList.remove('active');
+  } else {
+    selectedItems[itemName] = 1;
+    document.getElementById('btn-item-' + itemName).classList.add('active');
+  }
+  renderSelectedItems();
+  updatePreview();
+}
+
+function changeItemQty(itemName, val) {
+  if (selectedItems[itemName] !== undefined) {
+    selectedItems[itemName] = Math.max(1, selectedItems[itemName] + val);
+    renderSelectedItems();
+    updatePreview();
+  }
+}
+
+function handleQtyInput(itemName, element) {
+  let val = parseInt(element.value);
+  if (isNaN(val) || val < 1) {
+    val = 1;
+  }
+  selectedItems[itemName] = val;
+  updatePreview();
+}
+
+function renderSelectedItems() {
+  const listContainer = document.getElementById('selected-items-list');
+  listContainer.innerHTML = '';
+
+  Object.keys(selectedItems).forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <div class="item-name">${name}</div>
+      <div class="item-qty-control">
+        <button class="qty-btn" onclick="changeItemQty('${name}', -1)">-</button>
+        <input type="number" 
+               class="qty-input" 
+               value="${selectedItems[name]}" 
+               inputmode="numeric" 
+               pattern="[0-9]*"
+               spellcheck="false"
+               autocomplete="off"
+               autocapitalize="off"
+               oncontextmenu="return false;"
+               onclick="this.select()"
+               onfocus="this.select()" 
+               onkeydown="if(event.key==='Enter') this.blur();"
+               onchange="handleQtyInput('${name}', this)"
+               oninput="handleQtyInput('${name}', this)"
+               onblur="if(this.value==='' || this.value<1) this.value=1;">
+        <button class="qty-btn" onclick="changeItemQty('${name}', 1)">+</button>
+      </div>
+    `;
+    listContainer.appendChild(row);
+  });
+}
+
+function generateText(isForDisplay = true) {
+  const itemEntries = Object.entries(selectedItems);
+  let itemsText = "";
+  
+  if (itemEntries.length > 0) {
+    itemsText = itemEntries.map(([name, qty]) => `${name} ${qty}台`).join(CONFIG.separator);
+  }
+  
+  const fromPart = selectedFrom || "";
+  
+  if (!fromPart && !itemsText) {
+    return "";
+  }
+
+  let text = CONFIG.template
+    .replace('{from}', fromPart)
+    .replace('{items}', itemsText);
+  
+  return text.trim();
+}
+
+function updatePreview() {
+  document.getElementById('preview').value = generateText(true);
+}
+
+function copyText() {
+  const text = generateText(false);
+  const tempTextArea = document.createElement('textarea');
+  tempTextArea.value = text;
+  document.body.appendChild(tempTextArea);
+  tempTextArea.select();
+  document.execCommand('copy');
+  document.body.removeChild(tempTextArea);
+  alert('コピーしました');
+}
+
+function shareLine() {
+  const text = generateText(false);
+  const url = "https://line.me/R/msg/text/?" + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+function resetAll() {
+  if(!confirm("入力をリセットしますか？")) return;
+  selectedFrom = "";
+  selectedItems = {};
+  applyLocationRules();
+  updateFromButtons("");
+  updatePreview();
+}
+
+init();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('Service Worker registered');
+    }).catch(err => {
+      console.log('Service Worker registration failed: ', err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
