@@ -20,6 +20,12 @@
     border-left: 5px solid #2196f3;
     padding-left: 10px;
   }
+  h3 {
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    color: #666;
+    font-weight: bold;
+  }
   .section {
     background: #fff;
     padding: 15px;
@@ -49,7 +55,19 @@
     color: #fff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
   
+  .group-container {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+
   .item-list {
     display: flex;
     flex-direction: column;
@@ -100,9 +118,8 @@
     border-radius: 4px;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
     -moz-appearance: textfield;
-    /* スマホのコピー・翻訳メニューを抑制 */
     -webkit-touch-callout: none;
-    -webkit-user-select: all; /* 全選択は維持しつつ、メニューを出しにくくする */
+    -webkit-user-select: all;
   }
   .qty-input::-webkit-outer-spin-button,
   .qty-input::-webkit-inner-spin-button {
@@ -157,8 +174,15 @@
 <body>
 
 <div class="section">
-  <h2>どこから</h2>
-  <div id="from-buttons" class="button-grid"></div>
+  <h2>場所</h2>
+  <div class="group-container">
+    <h3>空台車の数量連絡</h3>
+    <div id="from-group-a" class="button-grid"></div>
+  </div>
+  <div class="group-container">
+    <h3>センター移動（茶コン・ドーリー等）</h3>
+    <div id="from-group-b" class="button-grid"></div>
+  </div>
 </div>
 
 <div class="section">
@@ -181,30 +205,34 @@
 
 <script>
 const CONFIG = {
-  locations: ["可児から", "大垣から", "北寺島", "山星屋", "丸憲"],
+  groupA: ["北寺島", "山星屋", "丸憲"],
+  groupB: ["可児から", "大垣から"],
   items: ["茶コン", "ドーリー", "シャリ箱", "空台車", "PC"],
   separator: "、",
-  template: "{from}  {items} です"
+  template: "{from}  {items} です",
+  rules: {
+    "北寺島": { only: ["空台車"], auto: ["空台車"] },
+    "山星屋": { only: ["空台車"], auto: ["空台車"] },
+    "丸憲": { only: ["空台車"], auto: ["空台車"] },
+    "可児から": { exclude: ["空台車"], auto: ["茶コン", "ドーリー"] },
+    "大垣から": { exclude: ["空台車"], auto: ["茶コン", "ドーリー"] }
+  }
 };
 
 let selectedFrom = "";
 let selectedItems = {}; 
 
 function init() {
-  const fromContainer = document.getElementById('from-buttons');
-  CONFIG.locations.forEach(loc => {
-    const btn = document.createElement('button');
-    btn.innerText = loc;
-    btn.onclick = () => {
-      if (selectedFrom === loc) {
-        selectedFrom = "";
-      } else {
-        selectedFrom = loc;
-      }
-      updateFromButtons(selectedFrom);
-      updatePreview();
-    };
-    fromContainer.appendChild(btn);
+  const groupAContainer = document.getElementById('from-group-a');
+  CONFIG.groupA.forEach(loc => {
+    const btn = createLocationButton(loc);
+    groupAContainer.appendChild(btn);
+  });
+
+  const groupBContainer = document.getElementById('from-group-b');
+  CONFIG.groupB.forEach(loc => {
+    const btn = createLocationButton(loc);
+    groupBContainer.appendChild(btn);
   });
 
   const itemContainer = document.getElementById('item-buttons');
@@ -221,8 +249,54 @@ function init() {
   updatePreview();
 }
 
+function createLocationButton(loc) {
+  const btn = document.createElement('button');
+  btn.innerText = loc;
+  btn.onclick = () => {
+    if (selectedFrom === loc) {
+      selectedFrom = "";
+    } else {
+      selectedFrom = loc;
+    }
+    applyLocationRules();
+    updateFromButtons(selectedFrom);
+    updatePreview();
+  };
+  return btn;
+}
+
+function applyLocationRules() {
+  const rule = CONFIG.rules[selectedFrom];
+  selectedItems = {};
+  
+  CONFIG.items.forEach(item => {
+    const btn = document.getElementById('btn-item-' + item);
+    btn.classList.remove('active');
+    
+    if (!selectedFrom) {
+      btn.disabled = false;
+      return;
+    }
+
+    if (rule.only) {
+      btn.disabled = !rule.only.includes(item);
+    } else if (rule.exclude) {
+      btn.disabled = rule.exclude.includes(item);
+    } else {
+      btn.disabled = false;
+    }
+
+    if (rule.auto && rule.auto.includes(item)) {
+      selectedItems[item] = 1;
+      btn.classList.add('active');
+    }
+  });
+
+  renderSelectedItems();
+}
+
 function updateFromButtons(activeText) {
-  const buttons = document.querySelectorAll('#from-buttons button');
+  const buttons = document.querySelectorAll('.group-container button');
   buttons.forEach(btn => {
     btn.classList.toggle('active', btn.innerText === activeText);
   });
@@ -336,8 +410,8 @@ function resetAll() {
   if(!confirm("入力をリセットしますか？")) return;
   selectedFrom = "";
   selectedItems = {};
-  document.getElementById('selected-items-list').innerHTML = '';
-  document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+  applyLocationRules();
+  updateFromButtons("");
   updatePreview();
 }
 
